@@ -31,7 +31,7 @@ export const links = {
 
 export type Project = {
   title: string;
-  category: "AI/ML" | "Web Development" | "Computer Vision" | "Systems";
+  category: "AI/ML" | "Web Development" | "Computer Vision" | "Systems" | "Blockchain & AI";
   description: string;
   technologies: string[];
   imageUrl: string; // cover image URL — empty shows a styled placeholder
@@ -62,6 +62,26 @@ export const projects: Project[] = [
     technologies: ["Python", "Deep Learning", "Computer Vision"],
     imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSoLAcbI-JN8JEfVRNu2hzxnSE8KDhXyc0pBUVA_2Vv5ZLILj-DJ0h9ojhr&s=10",
     githubUrl: "",
+    liveUrl: "",
+    caseStudyUrl: "",
+    featured: true,
+  },
+  {
+    title: "VeriChain – Blockchain-Based Product Authentication",
+    category: "Blockchain & AI",
+    description:
+      "A blockchain-based product authentication and clone detection system that verifies product identity and metadata integrity, tracks supply-chain provenance, and uses risk-adaptive analysis to detect suspicious scans and potential counterfeit products.",
+    technologies: [
+      "React",
+      "TypeScript",
+      "FastAPI",
+      "Python",
+      "Solidity",
+      "Hardhat",
+      "PostgreSQL",
+    ],
+    imageUrl: "https://cdn.sanity.io/images/caxo0d4b/production/323713cad69129fa7d7854086feea69688e6b293-2400x1350.webp?rect=0,45,2400,1260&bg=ffffff&w=1200&h=630&fit=fill",
+    githubUrl: "https://github.com/Diksha2506/verichain-product-authentication",
     liveUrl: "",
     caseStudyUrl: "",
     featured: true,
@@ -138,12 +158,12 @@ export const projects: Project[] = [
     caseStudyUrl: "",
     featured: false,
   },
-  
 ];
 
 export const projectCategories = [
   "All",
   "AI/ML",
+  "Blockchain & AI",
   "Web Development",
   "Computer Vision",
   "Systems",

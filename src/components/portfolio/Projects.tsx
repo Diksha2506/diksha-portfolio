@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect } from "react";
-import { BookOpen, ExternalLink, Brain, Globe, Eye, Cpu, ChevronLeft, ChevronRight } from "lucide-react";
-import { motion, useScroll, useTransform, useSpring } from "motion/react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { BookOpen, ExternalLink, Brain, Globe, Eye, Cpu, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
 import { GithubIcon } from "./BrandIcons";
 import { projectCategories, projects, type Project } from "@/data/portfolio";
 import { Reveal, SectionHeading } from "./Reveal";
 
-const categoryIcon = {
+const categoryIcon: Record<Project["category"], React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   "AI/ML": Brain,
+  "Blockchain & AI": ShieldCheck,
   "Web Development": Globe,
   "Computer Vision": Eye,
   Systems: Cpu,
@@ -103,180 +103,184 @@ export function FeaturedWork() {
 
 export function AllProjects() {
   const [filter, setFilter] = useState<(typeof projectCategories)[number]>("All");
-  const targetRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [maxScroll, setMaxScroll] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isInView, setIsInView] = useState(true);
+  const resumeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const shown = filter === "All" ? projects : projects.filter((p) => p.category === filter);
+  const filtered = useMemo(
+    () => (filter === "All" ? projects : projects.filter((p) => p.category === filter)),
+    [filter]
+  );
 
-  // Measure exact horizontal overflow distance so motion moves cards seamlessly
+  const total = filtered.length;
+
+  // Viewport intersection observer to run autoplay only when in view
   useEffect(() => {
-    const calculateDistance = () => {
-      if (trackRef.current) {
-        const trackWidth = trackRef.current.scrollWidth;
-        const viewportWidth = window.innerWidth;
-        // Padding offset buffer
-        const overflow = Math.max(0, trackWidth - viewportWidth + 64);
-        setMaxScroll(overflow);
-      }
-    };
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting);
+      },
+      { threshold: 0.05, rootMargin: "100px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
-    calculateDistance();
-    window.addEventListener("resize", calculateDistance);
-    return () => window.removeEventListener("resize", calculateDistance);
-  }, [shown, filter]);
+  // Internal buffer: clone items 3 times [Set 0] [Set 1 (Center)] [Set 2]
+  const displayItems = useMemo(() => {
+    if (total <= 1) return filtered;
+    return [...filtered, ...filtered, ...filtered];
+  }, [filtered, total]);
 
-  // Hook scroll progression while targetRef is in viewport
-  const { scrollYProgress } = useScroll({
-    target: targetRef,
-    offset: ["start start", "end end"],
-  });
+  // Track position index in the tripled array, starting at the beginning of middle set
+  const [offsetIndex, setOffsetIndex] = useState(total);
+  const [withTransition, setWithTransition] = useState(true);
 
-  const smoothProgress = useSpring(scrollYProgress, {
-    damping: 24,
-    stiffness: 140,
-    mass: 0.1,
-  });
+  // Sync starting index when filter or total changes
+  useEffect(() => {
+    setWithTransition(false);
+    setOffsetIndex(total);
+  }, [filter, total]);
 
-  const x = useTransform(smoothProgress, [0, 1], ["0px", `-${maxScroll}px`]);
+  // Step function that advances continuously forward or backward
+  const step = (direction: "next" | "prev") => {
+    if (total <= 1) return;
+    setWithTransition(true);
+    setOffsetIndex((prev) => (direction === "next" ? prev + 1 : prev - 1));
+  };
 
-  // Manual button scroll helper to nudge the page through the pinned section
-  const nudgeScroll = (direction: "left" | "right") => {
-    if (targetRef.current) {
-      const rect = targetRef.current.getBoundingClientRect();
-      const totalScrollableHeight = targetRef.current.offsetHeight - window.innerHeight;
-      const step = totalScrollableHeight / Math.max(1, shown.length - 1);
-      window.scrollBy({
-        top: direction === "right" ? step : -step,
-        behavior: "smooth",
-      });
+  // When transition ends, check if we entered Set 2 or Set 0 and instantaneously re-center to Set 1 without animation
+  const handleTransitionEnd = () => {
+    if (total <= 1) return;
+
+    // If we've reached the end of the middle set (into Set 2), teleport back to Set 1 invisibly
+    if (offsetIndex >= total * 2) {
+      setWithTransition(false);
+      setOffsetIndex((prev) => prev - total);
+    } else if (offsetIndex < total) {
+      // If stepped backward into Set 0, teleport forward to Set 1 invisibly
+      setWithTransition(false);
+      setOffsetIndex((prev) => prev + total);
     }
   };
+
+  // Manual arrow navigation: moves one card, pauses autoplay, resumes after 3 seconds
+  const handleManualNav = (direction: "next" | "prev") => {
+    setIsPaused(true);
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+    }
+    resumeTimerRef.current = setTimeout(() => {
+      setIsPaused(false);
+    }, 3000);
+
+    step(direction);
+  };
+
+  // Autoplay timer: advances one project card every 3 seconds continuously in one direction
+  useEffect(() => {
+    if (!isInView || isPaused || total <= 1) return;
+
+    const timer = setInterval(() => {
+      setWithTransition(true);
+      setOffsetIndex((prev) => prev + 1);
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [isInView, isPaused, total]);
 
   return (
     <section
       id="projects"
-      ref={targetRef}
-      className="relative bg-secondary/50"
-      style={{
-        // Height controls the vertical scroll distance during which the horizontal animation runs
-        height: `${Math.max(200, shown.length * 50 + 100)}vh`,
-      }}
+      ref={containerRef}
+      className="relative bg-secondary/50 py-20"
       aria-label="All projects"
     >
-      {/* Pinned Viewport Container */}
-      <div className="sticky top-0 flex h-screen w-full flex-col justify-between overflow-hidden py-10 sm:py-12">
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
-          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row sm:items-end">
-            <div className="text-center sm:text-left">
-              <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-                All Projects
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-                Scroll vertically to explore my work horizontally.
-              </p>
-            </div>
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
+        {/* Centered Heading */}
+        <SectionHeading
+          title="All Projects"
+          subtitle="Explore all my projects, or filter by domain."
+        />
 
-            {/* Desktop Navigation Helper Arrows */}
-            <div className="hidden items-center gap-2 sm:flex">
-              <button
-                onClick={() => nudgeScroll("left")}
-                aria-label="Scroll projects backward"
-                className="grid h-10 w-10 place-items-center rounded-full border bg-card text-foreground shadow-sm transition-all hover:border-primary hover:bg-secondary cursor-pointer"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => nudgeScroll("right")}
-                aria-label="Scroll projects forward"
-                className="grid h-10 w-10 place-items-center rounded-full border bg-card text-foreground shadow-sm transition-all hover:border-primary hover:bg-secondary cursor-pointer"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Filter Categories */}
-          <div className="mt-6 flex flex-wrap justify-center gap-2 sm:justify-start" role="tablist">
-            {projectCategories.map((c) => (
-              <button
-                key={c}
-                role="tab"
-                aria-selected={filter === c}
-                onClick={() => setFilter(c)}
-                className={`rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold transition-all ${
-                  filter === c
-                    ? "bg-primary text-primary-foreground card-shadow"
-                    : "border bg-card text-muted-foreground hover:border-primary hover:text-primary"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
+        {/* Filter Categories */}
+        <div className="mb-10 flex flex-wrap justify-center gap-2" role="tablist">
+          {projectCategories.map((c) => (
+            <button
+              key={c}
+              role="tab"
+              aria-selected={filter === c}
+              onClick={() => {
+                setFilter(c);
+              }}
+              className={`rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold transition-all ${
+                filter === c
+                  ? "bg-primary text-primary-foreground card-shadow"
+                  : "border bg-card text-muted-foreground hover:border-primary hover:text-primary"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
         </div>
 
-        {/* Horizontal Moving Rail */}
-        <div className="relative my-auto w-full overflow-hidden">
-          <motion.div
-            ref={trackRef}
-            style={{ x }}
-            className="flex gap-6 px-6 sm:px-12 w-max"
+        {/* Compact Carousel with Previous / Next Arrows on Either Side */}
+        <div className="relative flex items-center gap-2 sm:gap-4">
+          {/* Previous Button on Left */}
+          <button
+            type="button"
+            onClick={() => handleManualNav("prev")}
+            aria-label="Previous project"
+            className="flex-shrink-0 grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full border bg-card text-foreground shadow-md transition-all hover:scale-105 hover:border-primary hover:bg-secondary cursor-pointer active:scale-95 z-10"
           >
-            {shown.map((p) => (
-              <article
-                key={p.title}
-                className="group flex w-[82vw] max-w-[340px] flex-shrink-0 flex-col overflow-hidden rounded-2xl border bg-card card-shadow transition-all duration-300 hover:-translate-y-1 hover:card-shadow-hover sm:w-[350px] lg:w-[380px]"
-              >
-                <Cover project={p} />
-                <div className="flex flex-1 flex-col gap-3 p-5">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-                    {p.category}
-                  </span>
-                  <h3 className="font-bold leading-snug line-clamp-2">{p.title}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
-                    {p.description}
-                  </p>
-                  <Tags tags={p.technologies} />
-                  <div className="mt-auto pt-2">
-                    <ProjectLinks project={p} />
-                  </div>
-                </div>
-              </article>
-            ))}
-          </motion.div>
-        </div>
+            <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+          </button>
 
-        {/* Bottom Progress Bar & Mobile indicator */}
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-xs text-muted-foreground">
-              Scroll down ↓ to view more
-            </span>
-            <div className="flex sm:hidden gap-2">
-              <button
-                onClick={() => nudgeScroll("left")}
-                aria-label="Scroll left"
-                className="grid h-8 w-8 place-items-center rounded-full border bg-card text-foreground shadow-sm hover:bg-secondary cursor-pointer"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => nudgeScroll("right")}
-                aria-label="Scroll right"
-                className="grid h-8 w-8 place-items-center rounded-full border bg-card text-foreground shadow-sm hover:bg-secondary cursor-pointer"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
+          {/* Carousel Viewport (Showing 3 cards on desktop, 2 on tablet, 1 on mobile) */}
+          <div className="relative min-w-0 flex-1 overflow-hidden py-4">
+            <div
+              onTransitionEnd={handleTransitionEnd}
+              className={`flex gap-6 ${withTransition ? "transition-transform duration-500 ease-out" : ""}`}
+              style={{
+                transform: `translateX(calc(-${offsetIndex} * (100% + 24px) / 3))`,
+              }}
+            >
+              {displayItems.map((p, idx) => (
+                <article
+                  key={`${p.title}-${idx}`}
+                  className="group flex flex-col flex-shrink-0 overflow-hidden rounded-2xl border bg-card card-shadow transition-all duration-300 hover:-translate-y-1 hover:card-shadow-hover w-[85vw] sm:w-[calc(50%-12px)] lg:w-[calc((100%-48px)/3)]"
+                >
+                  <Cover project={p} />
+                  <div className="flex flex-1 flex-col gap-3 p-5">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                      {p.category}
+                    </span>
+                    <h3 className="font-bold leading-snug line-clamp-2">{p.title}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
+                      {p.description}
+                    </p>
+                    <Tags tags={p.technologies} />
+                    <div className="mt-auto pt-2">
+                      <ProjectLinks project={p} />
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
-          {/* Subtle scroll progress line */}
-          <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-border/60">
-            <motion.div
-              style={{ scaleX: smoothProgress, transformOrigin: "0%" }}
-              className="h-full bg-primary"
-            />
-          </div>
+
+          {/* Next Button on Right */}
+          <button
+            type="button"
+            onClick={() => handleManualNav("next")}
+            aria-label="Next project"
+            className="flex-shrink-0 grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full border bg-card text-foreground shadow-md transition-all hover:scale-105 hover:border-primary hover:bg-secondary cursor-pointer active:scale-95 z-10"
+          >
+            <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+          </button>
         </div>
       </div>
     </section>

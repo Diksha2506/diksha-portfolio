@@ -67,24 +67,53 @@ export function Certifications() {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {certifications.map((c, i) => (
-              <Reveal key={i} delay={i * 0.08}>
-                <div className="overflow-hidden rounded-2xl border bg-card card-shadow">
-                  {c.imageUrl ? (
-                    <button onClick={() => setPreview(c.imageUrl)} className="block w-full" aria-label={`Enlarge ${c.name}`}>
-                      <img src={c.imageUrl} alt={c.name} loading="lazy" className="aspect-[4/3] w-full object-cover" />
-                    </button>
-                  ) : (
-                    <div className="grid aspect-[4/3] place-items-center bg-gradient-to-br from-secondary to-lavender">
-                      <Award className="h-10 w-10 text-primary/60" />
+              <Reveal key={i} delay={i * 0.08} className="h-full">
+                <div className="flex h-full flex-col overflow-hidden rounded-2xl border bg-card p-5 card-shadow transition-shadow hover:shadow-md">
+                  {/* Small rectangular certificate preview */}
+                  <div className="flex items-center justify-center rounded-xl border border-border/50 bg-secondary/40 p-2">
+                    {c.imageUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => setPreview(c.imageUrl)}
+                        className="group relative flex h-[85px] w-[135px] items-center justify-center overflow-hidden rounded-lg bg-card/60 p-1 transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        aria-label={`Enlarge ${c.name}`}
+                      >
+                        <img
+                          src={c.imageUrl}
+                          alt={c.name}
+                          loading="lazy"
+                          className="h-full w-full object-contain"
+                        />
+                      </button>
+                    ) : (
+                      <div className="flex h-[85px] w-[135px] items-center justify-center rounded-lg bg-gradient-to-br from-secondary to-lavender">
+                        <Award className="h-8 w-8 text-primary/60" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Details below preview */}
+                  <div className="mt-4 flex flex-1 flex-col justify-between">
+                    <div>
+                      <h3 className="line-clamp-2 font-bold leading-snug text-foreground">
+                        {c.name}
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {c.organization} · {c.date}
+                      </p>
                     </div>
-                  )}
-                  <div className="p-5">
-                    <h3 className="font-bold">{c.name}</h3>
-                    <p className="text-sm text-muted-foreground">{c.organization} · {c.date}</p>
+
                     {c.credentialUrl && (
-                      <a href={c.credentialUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary hover:text-deep">
-                        Verify <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
+                      <div className="pt-4">
+                        <a
+                          href={c.credentialUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-deep"
+                        >
+                          Verify <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </div>
                     )}
                   </div>
                 </div>

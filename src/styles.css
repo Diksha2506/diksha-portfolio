@@ -1,0 +1,145 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-deep: var(--deep);
+  --color-deep-foreground: var(--deep-foreground);
+  --color-lavender: var(--lavender);
+  --color-lavender-foreground: var(--lavender-foreground);
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.875rem;
+  --background: oklch(0.984 0.006 230); /* #F7FAFF */
+  --foreground: oklch(0.3 0.05 255); /* #172B4D */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.3 0.05 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.3 0.05 255);
+  --primary: oklch(0.66 0.14 235); /* #38A9E8 */
+  --primary-foreground: oklch(0.99 0.005 230);
+  --secondary: oklch(0.955 0.02 225); /* #EAF5FF */
+  --secondary-foreground: oklch(0.42 0.1 260);
+  --muted: oklch(0.955 0.02 225);
+  --muted-foreground: oklch(0.55 0.03 255); /* #64748B */
+  --accent: oklch(0.945 0.025 295); /* #EDE7FF */
+  --accent-foreground: oklch(0.42 0.1 290);
+  --deep: oklch(0.42 0.11 262); /* #1456A0 */
+  --deep-foreground: oklch(0.98 0.005 230);
+  --lavender: oklch(0.945 0.025 295);
+  --lavender-foreground: oklch(0.42 0.1 290);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.915 0.015 235);
+  --input: oklch(0.915 0.015 235);
+  --ring: oklch(0.66 0.14 235);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--primary) 25%, transparent);
+  }
+}
+
+@utility text-gradient {
+  background: linear-gradient(
+    120deg,
+    var(--deep) 0%,
+    var(--primary) 55%,
+    oklch(0.62 0.12 290) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility card-shadow {
+  box-shadow:
+    0 1px 2px color-mix(in oklab, var(--deep) 5%, transparent),
+    0 12px 32px -12px color-mix(in oklab, var(--deep) 14%, transparent);
+}
+
+@utility card-shadow-hover {
+  box-shadow:
+    0 2px 4px color-mix(in oklab, var(--deep) 6%, transparent),
+    0 24px 48px -16px color-mix(in oklab, var(--primary) 30%, transparent);
+}
+
+@utility hero-blob {
+  background:
+    radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--primary) 35%, transparent),
+      transparent
+    ),
+    radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--lavender) 80%, transparent),
+      transparent
+    );
+  filter: blur(10px);
+}
+
+@utility hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
